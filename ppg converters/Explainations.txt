@@ -1,0 +1,44 @@
+PPG to Respiratory (Multiple Techniuques):
+    
+    Signal Preprocessing:
+        Resampling: The PPG signal is resampled to a higher frequency to enhance the accuracy of peak detection.
+        Filtering: A bandpass filter is applied to remove noise and baseline drift from the PPG signal.
+    
+    Peak Detection:
+        Peaks corresponding to respiratory cycles are detected in the filtered PPG signal. This is typically done using peak detection algorithms like find_peaks.
+    
+    Interval Calculation:
+        Time intervals between successive respiratory peaks are computed.
+    
+    Outlier Removal:
+        Outliers in the interval data are removed to improve the accuracy of respiratory rate estimation. This is often done using methods like median absolute deviation (MAD) based outlier detection.
+    
+    Respiratory Rate Estimation:
+        The mean interval between respiratory peaks is calculated, and the respiratory rate is derived from this interval. Typically, respiratory rate is expressed in breaths per minute (BPM).
+    
+    Interpolation (Optional):
+        The respiratory signal can be interpolated to match the original time scale if needed.
+
+    References and Citations:
+    Addison, Paul S. "Wavelet transforms and the ECG: a review." Physiological measurement 26, no. 5 (2005): R155.
+    (link) https://www.researchgate.net/publication/7672339_Wavelet_transforms_and_the_ECG_A_review
+    Elgendi, Mohamed. "On the analysis of fingertip photoplethysmogram signals." Current Cardiology Reviews 8, no. 1 (2012): 14-25.
+    (link) https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3394104/
+    McNames, James, and Richard A. Thong. "A method for measuring respiratory rate in a pulse oximeter." US Patent 6,173,063, issued January 16, 2001.
+    (link) https://patents.google.com/patent/US20100298730A1/en
+
+
+PPG to ECG (CardioGAN):
+    pre trained model on following datasets:
+        BIDMC
+        CAPNO
+        DALIA
+        WESAD
+
+    Used provided testing file on our data
+
+    References and Citations:
+    CardioGAN: Attentive Generative Adversarial Network with Dual Discriminators for Synthesis of ECG from PPG
+    (link) https://arxiv.org/abs/2010.00104?source=post_page-----60c9724d9e70--------------------------------
+    ppg2ecg-cardiogan
+    https://github.com/pritamqu/ppg2ecg-cardiogan

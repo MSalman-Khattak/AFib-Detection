@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <h1>Welcome to the home page!</h1>
+    {% if user %}
+    <p>Hello, {{ user.username }}!</p>
+    <p><a href="{{ url_for('logout') }}">Logout</a></p>
+    <button id="read-ppg-btn">Read PPG</button>
+    <button id="cancel-btn">Cancel</button> <!-- Add cancel button -->
+    <p id="timer"></p>
+    <div id="status">Idle</div>
+    <div id="prediction"></div>
+    <div id="graph">
+        <canvas id="myChart"></canvas>
+    </div>
+
+    {% else %}
+    <p><a href="{{ url_for('login') }}">Login</a></p>
+    <p><a href="{{ url_for('signup') }}">Signup</a></p>
+    {% endif %}
+
+    <script>
+        var intervalId; // Variable to store the interval ID
+        function sleep(time) {
+            return new Promise((resolve) => setTimeout(resolve, time));
+        }
+
+
+        function history_data() {
+
+            $.get('/get_csv_data', function (data) {
+                if (data.success == false) {
+                    $('#graph').html('<p>No previous data</p>');
+                } else {
+                    
+                    // console.log(data); // Log the received data for inspection
+
+                    // Extract data points
+                    var labels = [];
+                    var ppgData = [];
+                    var ecgData = [];
+                    var respData = [];
+                    var afibData = [];
+
+                    // Loop through the data array
+                    data.forEach(function (item) {
+                        labels.push(item.Time);
+                        ppgData.push(item.PPG);
+                        ecgData.push(item.ECG);
+                        respData.push(item.resp);
+                        afibData.push(item.afib);
+                    });
+
+
+                    prediction = afibData[0];
+                    
+                    $('#graph').html('<p>Your old afib: '+ prediction + '</p><br>' + '<canvas id="myChart"></canvas>');
+
+
+
+                    var ctx = document.getElementById('myChart').getContext('2d');
+                    var myChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'PPG',
+                                data: ppgData,
+                                borderColor: 'red',
+                                borderWidth: 1
+                            }, {
+                                label: 'ECG',
+                                data: ecgData,
+                                borderColor: 'blue',
+                                borderWidth: 1
+                            }, {
+                                label: 'resp',
+                                data: respData,
+                                borderColor: 'green',
+                                borderWidth: 1
+                            },]
+                        },
+                        options: {
+                            // Additional options here
+                        }
+                    });
+                }
+            });
+        }
+
+
+        $(document).ready(function () {
+            history_data();
+
+            $('#read-ppg-btn').click(function () {
+                $.get('/read_ppg', function (data) {  // Trigger the '/read_ppg' route when button is clicked
+                    if (data.success) {
+                        $('#status').text("PPG data read successfully!");
+                        // Perform any additional actions with the data if needed
+                    } else {
+                        $('#status').text("PPG data read unsuccessfull!");
+                    }
+                });
+                $('#status').text("Reading PPG");
+                var duration = 120;  // Duration in seconds
+                var display = $('#timer');
+                startTimer(duration, display);
+            });
+
+            $('#cancel-btn').click(function () { // Cancel button click event
+                $.get('/cancel_reading');  // Trigger the '/cancel_reading' route when button is clicked
+                clearInterval(intervalId); // Clear the interval
+                $('#timer').text("00:00"); // Reset the timer display
+            });
+
+            function prediction() {
+                $('#status').text("Extracting ECG and Respiratory signals");
+                $.get('/ppg_to_ecg_resp', function (data) {  // Trigger the '/predict' route when button is clicked
+                    if (data.success) {
+                        $('#status').text("Signals Extracted");
+                        sleep(5000).then(() => { });
+                        $('#status').text("Predicting");
+                        sleep(5000).then(() => { });
+                        $.get('/afib_detection', function (data) {
+                            if (data.success) {
+
+                                $('#prediction').html('<p>AFib Prediction Result: ' + data.result + '</p>');
+                                $('#status').text("Prediction done");
+                                sleep(5000).then(() => { });
+                                $('#status').text("Saving CSV to history");
+                                sleep(5000).then(() => { });
+                                $.get('/move_csv', function (data) {
+                                    if (data.success) {
+                                        $('#status').text("CSV saved");
+                                        history_data();
+                                    }
+                                    else {
+                                        $('#status').text("CSV save failed");
+                                    }
+                                });
+                            }
+                            else {
+                                $('#status').text("Prediction failed");
+                            }
+                        });
+                    }
+                    else {
+                        $('#status').text("Signals extraction failed");
+                    }
+                });
+
+            }
+
+            function startTimer(duration, display) {
+                var timer = duration, minutes, seconds;
+                intervalId = setInterval(function () { // Assign interval ID to global variable
+                    minutes = parseInt(timer / 60, 10);
+                    seconds = parseInt(timer % 60, 10);
+
+                    minutes = minutes < 10 ? "0" + minutes : minutes;
+                    seconds = seconds < 10 ? "0" + seconds : seconds;
+
+                    display.text(minutes + ":" + seconds);
+
+                    if (--timer < 0) {
+                        clearInterval(intervalId);
+                        display.text("00:00");
+                        prediction();
+                    }
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+
+</html>
